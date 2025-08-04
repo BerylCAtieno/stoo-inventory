@@ -19,7 +19,7 @@ func main() {
 	router := gin.Default()
 
 	router.GET("/", func(c *gin.Context) {
-		c.String(200, "Welcome to Stoo Inventory Management App 🚀")
+		c.String(200, "Welcome to Stoo Inventory Management App")
 	})
 
 	api := router.Group("/api/v1")
