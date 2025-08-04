@@ -2,6 +2,8 @@
 
 BINARY_NAME := stoo-inventory-app
 
+PROJECT_ROOT := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+
 BUILD_DIR := ./bin
 
 MAIN_PACKAGE := ./cmd/server
@@ -14,8 +16,8 @@ build:
 
 
 run: build
-	@echo "Running $(BINARY_NAME)..."
-	$(BUILD_DIR)/$(BINARY_NAME)
+	@echo "Running $(BINARY_NAME) from root..."
+	cd $(PROJECT_ROOT) && $(BUILD_DIR)/$(BINARY_NAME)
 
 
 dev:
