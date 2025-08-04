@@ -11,7 +11,6 @@ import (
 )
 
 type AppConfig struct {
-	// Database
 	DBHost     string
 	DBUser     string
 	DBPassword string
@@ -20,11 +19,9 @@ type AppConfig struct {
 	DBSSLMode  string
 	DBTimeZone string
 
-	// JWT
 	JwtSecret          string
 	JwtExpirationHours int
 
-	// Server
 	Port string
 }
 
@@ -37,7 +34,6 @@ func LoadConfig() {
 		log.Printf("Warning: .env file not found or could not be loaded: %v. Assuming environment variables are set externally.\n", err)
 	}
 
-	// Database Configuration
 	Config.DBHost = getEnv("DB_HOST", "localhost")
 	Config.DBUser = getEnv("DB_USER", "postgres")
 	Config.DBPassword = getEnv("DB_PASSWORD", "")
@@ -45,7 +41,6 @@ func LoadConfig() {
 	Config.DBPort = getEnv("DB_PORT", "5432")
 	Config.DBSSLMode = getEnv("DB_SSLMODE", "disable")
 
-	// Validate TimeZone
 	tz := getEnv("DB_TIMEZONE", "Africa/Nairobi")
 	_, err = time.LoadLocation(tz)
 	if err != nil {
@@ -53,7 +48,6 @@ func LoadConfig() {
 	}
 	Config.DBTimeZone = tz
 
-	// JWT Configuration
 	Config.JwtSecret = getEnv("JWT_SECRET", "")
 	if Config.JwtSecret == "" {
 		log.Fatal("Error: JWT_SECRET environment variable is not set!")
@@ -65,13 +59,11 @@ func LoadConfig() {
 	}
 	Config.JwtExpirationHours = jwtExpHours
 
-	// Server Configuration
 	Config.Port = getEnv("PORT", "8080")
 
 	fmt.Println("Configuration loaded successfully.")
 }
 
-// getEnv gets an environment variable or returns a default value.
 func getEnv(key, defaultValue string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
