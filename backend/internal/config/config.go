@@ -23,6 +23,9 @@ type AppConfig struct {
 	JwtExpirationHours int
 
 	Port string
+
+	RedisAddress string
+	RedisPort    string
 }
 
 var Config AppConfig
@@ -60,6 +63,9 @@ func LoadConfig() {
 	Config.JwtExpirationHours = jwtExpHours
 
 	Config.Port = getEnv("PORT", "8080")
+
+	Config.RedisAddress = getEnv("REDIS_ADDRESS", "localhost")
+	Config.RedisPort = getEnv("REDIS_PORT", "6432")
 
 	fmt.Println("Configuration loaded successfully.")
 }
