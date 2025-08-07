@@ -64,8 +64,7 @@ func LoadConfig() {
 
 	Config.Port = getEnv("PORT", "8080")
 
-	Config.RedisAddress = getEnv("REDIS_ADDRESS", "localhost")
-	Config.RedisPort = getEnv("REDIS_PORT", "6432")
+	Config.RedisAddress = getEnv("REDIS_ADDRESS", "localhost:6379")
 
 	fmt.Println("Configuration loaded successfully.")
 }
