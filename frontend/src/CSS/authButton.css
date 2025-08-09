@@ -1,0 +1,12 @@
+
+.auth-button {
+  padding: 0.5rem 2rem;
+  background-color: #2563eb; 
+  color: white;
+  border-radius: 0.55rem;
+  font-weight: 500;
+  font-size: 0.78em;
+}
+.auth-button:hover {
+  background-color: #1d4ed8;
+}
