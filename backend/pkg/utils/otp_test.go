@@ -8,7 +8,7 @@ import (
 )
 
 func TestGenerateOTP(t *testing.T) {
-	otp, err := GenerateOTP()
+	otp, err := GenerateOtp()
 
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
@@ -31,7 +31,7 @@ func TestOtpFlow(t *testing.T) {
 	email := "test@example.com"
 
 	// Step 1: Generate OTP
-	otp, err := GenerateOTP()
+	otp, err := GenerateOtp()
 	if err != nil {
 		t.Fatalf("GenerateOTP failed: %v", err)
 	}

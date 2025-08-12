@@ -11,7 +11,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func GenerateOTP() (string, error) {
+func GenerateOtp() (string, error) {
 	max := big.NewInt(1000000)
 	otp, err := rand.Int(rand.Reader, max)
 
