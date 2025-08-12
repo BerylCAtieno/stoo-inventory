@@ -30,7 +30,7 @@ type AppConfig struct {
 	MailAddress  string
 	SMTPHost     string
 	SMTPPassword string
-	SMTPPort     string
+	SMTPPort     int
 }
 
 var Config AppConfig
@@ -73,8 +73,14 @@ func LoadConfig() {
 
 	Config.MailAddress = getEnv("MAIL_FROM_ADDRESS", "berylatieno30@gmail.com")
 	Config.SMTPHost = getEnv("SMTP_HOST", "smtp.gmail.com")
-	Config.SMTPPort = getEnv("SMTP_PORT", "587")
 	Config.SMTPPassword = getEnv("SMTP_PASSWORD", "")
+	smtpPortStr := getEnv("SMTP_PORT", "587")
+	smtpPort, err := strconv.Atoi(smtpPortStr)
+	if err != nil {
+		log.Printf("Warning: Invalid SMTP_PORT '%s'. Using default 587. Error: %v", smtpPortStr, err)
+		smtpPort = 587
+	}
+	Config.SMTPPort = smtpPort
 
 	fmt.Println("Configuration loaded successfully.")
 }
