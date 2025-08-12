@@ -1,0 +1,15 @@
+.sign-up-wrapper {
+    border: 1px solid red;
+    max-width: 90vw;
+    width: 90vw;
+    max-height: 80vh;
+    justify-self: center;
+}
+.flex {
+    display: flex;
+}
+
+.inventory-image {
+    background-position: center;
+    border: 1px solid;
+}
