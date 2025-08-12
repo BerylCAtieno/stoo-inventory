@@ -26,6 +26,11 @@ type AppConfig struct {
 
 	RedisAddress string
 	RedisPort    string
+
+	MailAddress  string
+	SMTPHost     string
+	SMTPPassword string
+	SMTPPort     string
 }
 
 var Config AppConfig
@@ -65,6 +70,11 @@ func LoadConfig() {
 	Config.Port = getEnv("PORT", "8080")
 
 	Config.RedisAddress = getEnv("REDIS_ADDRESS", "localhost:6379")
+
+	Config.MailAddress = getEnv("MAIL_FROM_ADDRESS", "berylatieno30@gmail.com")
+	Config.SMTPHost = getEnv("SMTP_HOST", "smtp.gmail.com")
+	Config.SMTPPort = getEnv("SMTP_PORT", "587")
+	Config.SMTPPassword = getEnv("SMTP_PASSWORD", "")
 
 	fmt.Println("Configuration loaded successfully.")
 }
