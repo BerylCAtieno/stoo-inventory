@@ -21,6 +21,10 @@ type AppConfig struct {
 
 	JwtSecret          string
 	JwtExpirationHours int
+	JwtRefreshHours    int
+
+	OtpExpiry      time.Duration
+	ResetOtpExpiry time.Duration
 
 	Port string
 
@@ -66,6 +70,27 @@ func LoadConfig() {
 		jwtExpHours = 24
 	}
 	Config.JwtExpirationHours = jwtExpHours
+
+	jwtRefreshHours, err := strconv.Atoi(getEnv("JWT_REFRESH_HOURS", "168"))
+	if err != nil {
+		log.Printf("Warning: Invalid JWT_REFRESH_HOURS '%s'. Using default 168 hours (7 days). Error: %v", os.Getenv("JWT_REFRESH_HOURS"), err)
+		jwtRefreshHours = 168
+	}
+	Config.JwtRefreshHours = jwtRefreshHours
+
+	OtpExpiry, err := strconv.Atoi(getEnv("OTP_EXPIRY", "5"))
+	if err != nil {
+		log.Printf("Warning: Invalid OTP_EXPIRY '%s'. Using default 5 minutes. Error: %v", os.Getenv("OTP_EXPIRY"), err)
+		OtpExpiry = 5
+	}
+	Config.OtpExpiry = time.Duration(OtpExpiry) * time.Minute
+
+	ResetOtpExpiry, err := strconv.Atoi(getEnv("RESET_OTP_EXPIRY", "10"))
+	if err != nil {
+		log.Printf("Warning: Invalid RESET_OTP_EXPIRY '%s'. Using default 10 minutes. Error: %v", os.Getenv("RESET_OTP_EXPIRY"), err)
+		ResetOtpExpiry = 10
+	}
+	Config.ResetOtpExpiry = time.Duration(ResetOtpExpiry) * time.Minute
 
 	Config.Port = getEnv("PORT", "8080")
 
