@@ -4,18 +4,18 @@ import (
 	"net/http"
 
 	"github.com/berylCAtieno/stoo-inventory/internal/services"
-
 	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
-	Service *services.AuthService
+	authService *services.AuthService
 }
 
-func NewAuthHandler(service *services.AuthService) *AuthHandler {
-	return &AuthHandler{Service: service}
+func NewAuthHandler(authService *services.AuthService) *AuthHandler {
+	return &AuthHandler{authService: authService}
 }
 
+// Register
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req struct {
 		FirstName string `json:"first_name" binding:"required"`
@@ -28,32 +28,34 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	if err := h.Service.Register(req.FirstName, req.LastName, req.Email, req.Password); err != nil {
+	if err := h.authService.Register(req.FirstName, req.LastName, req.Email, req.Password); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "User registered. Please verify OTP sent to your email."})
+	c.JSON(http.StatusCreated, gin.H{"message": "registration successful, check email for OTP"})
 }
 
+// Verify OTP
 func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 	var req struct {
 		Email string `json:"email" binding:"required,email"`
-		OTP   string `json:"otp" binding:"required"`
+		Otp   string `json:"otp" binding:"required,len=6"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.Service.VerifyOTP(req.Email, req.OTP); err != nil {
+	if err := h.authService.VerifyOTP(req.Email, req.Otp); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Account verified successfully."})
+	c.JSON(http.StatusOK, gin.H{"message": "account verified successfully"})
 }
 
+// Login
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req struct {
 		Email    string `json:"email" binding:"required,email"`
@@ -64,15 +66,19 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.Service.Login(req.Email, req.Password)
+	access, refresh, err := h.authService.Login(req.Email, req.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	c.JSON(http.StatusOK, gin.H{
+		"access_token":  access,
+		"refresh_token": refresh,
+	})
 }
 
+// Forgot Password
 func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	var req struct {
 		Email string `json:"email" binding:"required,email"`
@@ -82,18 +88,19 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	if err := h.Service.ForgotPassword(req.Email); err != nil {
+	if err := h.authService.ForgotPassword(req.Email); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Password reset OTP sent to your email."})
+	c.JSON(http.StatusOK, gin.H{"message": "password reset OTP sent"})
 }
 
+// Reset Password
 func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	var req struct {
 		Email       string `json:"email" binding:"required,email"`
-		OTP         string `json:"otp" binding:"required"`
+		Otp         string `json:"otp" binding:"required,len=6"`
 		NewPassword string `json:"new_password" binding:"required,min=6"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -101,10 +108,10 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	if err := h.Service.ResetPassword(req.Email, req.OTP, req.NewPassword); err != nil {
+	if err := h.authService.ResetPassword(req.Email, req.Otp, req.NewPassword); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Password reset successful."})
+	c.JSON(http.StatusOK, gin.H{"message": "password reset successful"})
 }
