@@ -50,3 +50,36 @@ func ValidateJWT(tokenString string, secret string) (*JWTClaims, error) {
 
 	return claims, nil
 }
+
+// GenerateJWTPair generates both access and refresh JWT tokens
+func GenerateJWTPair(userID uint, secret string, accessExpiryHours, refreshExpiryHours int) (accessToken, refreshToken string, err error) {
+	// Access token
+	accessClaims := JWTClaims{
+		UserID: userID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(accessExpiryHours))),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	accessTokenObj := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
+	accessToken, err = accessTokenObj.SignedString([]byte(secret))
+	if err != nil {
+		return "", "", fmt.Errorf("failed to sign access token: %w", err)
+	}
+
+	// Refresh token
+	refreshClaims := JWTClaims{
+		UserID: userID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(refreshExpiryHours))),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	refreshTokenObj := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
+	refreshToken, err = refreshTokenObj.SignedString([]byte(secret))
+	if err != nil {
+		return "", "", fmt.Errorf("failed to sign refresh token: %w", err)
+	}
+
+	return accessToken, refreshToken, nil
+}
