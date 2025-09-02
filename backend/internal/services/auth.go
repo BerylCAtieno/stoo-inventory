@@ -8,28 +8,26 @@ import (
 
 	"github.com/berylCAtieno/stoo-inventory/internal/config"
 	"github.com/berylCAtieno/stoo-inventory/internal/models"
+	"github.com/berylCAtieno/stoo-inventory/internal/repositories"
 	"github.com/berylCAtieno/stoo-inventory/pkg/utils"
-
-	"gorm.io/gorm"
 )
 
 type AuthService struct {
-	DB *gorm.DB
+	repo repositories.UserRepository
 }
 
-func NewAuthService(db *gorm.DB) *AuthService {
-	return &AuthService{DB: db}
+func NewAuthService(repo repositories.UserRepository) *AuthService {
+	return &AuthService{repo: repo}
 }
 
 // Register user
 func (s *AuthService) Register(firstName, lastName, email, password string) error {
 	// Check if user exists
-	var existing models.User
-	err := s.DB.Where("email = ?", email).First(&existing).Error
+	_, err := s.repo.FindByEmail(email)
 	if err == nil {
 		return errors.New("user already exists")
 	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if !errors.Is(err, repositories.ErrNotFound) {
 		return fmt.Errorf("db error: %w", err)
 	}
 
@@ -39,7 +37,7 @@ func (s *AuthService) Register(firstName, lastName, email, password string) erro
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	user := models.User{
+	user := &models.User{
 		FirstName:    firstName,
 		LastName:     lastName,
 		Email:        email,
@@ -47,28 +45,29 @@ func (s *AuthService) Register(firstName, lastName, email, password string) erro
 		IsActive:     false,
 	}
 
-	// Run transaction
-	return s.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&user).Error; err != nil {
-			return fmt.Errorf("failed to create user: %w", err)
-		}
+	// Save user
+	if err := s.repo.Create(user); err != nil {
+		return fmt.Errorf("failed to create user: %w", err)
+	}
 
-		otp, err := utils.GenerateOtp()
-		if err != nil {
-			return fmt.Errorf("failed to generate OTP: %w", err)
-		}
+	// Generate OTP
+	otp, err := utils.GenerateOtp()
+	if err != nil {
+		return fmt.Errorf("failed to generate OTP: %w", err)
+	}
 
-		if err := utils.SendVerificationEmail(email, otp); err != nil {
-			return fmt.Errorf("failed to send verification email: %w", err)
-		}
+	// Send verification email
+	if err := utils.SendVerificationEmail(email, otp); err != nil {
+		return fmt.Errorf("failed to send verification email: %w", err)
+	}
 
-		ctx := context.Background()
-		if err := utils.StoreOtp(ctx, email, otp, config.Config.OtpExpiry); err != nil {
-			return fmt.Errorf("failed to store OTP: %w", err)
-		}
+	// Store OTP in Redis
+	ctx := context.Background()
+	if err := utils.StoreOtp(ctx, email, otp, config.Config.OtpExpiry); err != nil {
+		return fmt.Errorf("failed to store OTP: %w", err)
+	}
 
-		return nil
-	})
+	return nil
 }
 
 // Verify OTP
@@ -81,16 +80,17 @@ func (s *AuthService) VerifyOTP(email, otp string) error {
 		return errors.New("invalid or expired OTP")
 	}
 
-	return s.DB.Model(&models.User{}).
-		Where("email = ?", email).
-		Update("is_active", true).Error
+	return s.repo.UpdateStatus(email, map[string]interface{}{
+		"is_active":  true,
+		"updated_at": time.Now(),
+	})
 }
 
 // Login user
 func (s *AuthService) Login(email, password string) (string, string, error) {
-	var user models.User
-	if err := s.DB.Where("email = ?", email).First(&user).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	user, err := s.repo.FindByEmail(email)
+	if err != nil {
+		if errors.Is(err, repositories.ErrNotFound) {
 			return "", "", errors.New("invalid credentials")
 		}
 		return "", "", fmt.Errorf("db error: %w", err)
@@ -101,8 +101,7 @@ func (s *AuthService) Login(email, password string) (string, string, error) {
 	}
 
 	if !utils.CheckPasswordHash(password, user.PasswordHash) {
-		// slow down brute-force
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond) // slow down brute-force
 		return "", "", errors.New("invalid credentials")
 	}
 
@@ -118,8 +117,10 @@ func (s *AuthService) Login(email, password string) (string, string, error) {
 	}
 
 	// Update last login
-	now := time.Now()
-	if err := s.DB.Model(&user).Update("last_login_at", now).Error; err != nil {
+	if err := s.repo.UpdateStatus(email, map[string]interface{}{
+		"last_login_at": time.Now(),
+		"updated_at":    time.Now(),
+	}); err != nil {
 		return "", "", fmt.Errorf("failed to update last login: %w", err)
 	}
 
@@ -128,9 +129,9 @@ func (s *AuthService) Login(email, password string) (string, string, error) {
 
 // ForgotPassword - send OTP for reset
 func (s *AuthService) ForgotPassword(email string) error {
-	var user models.User
-	if err := s.DB.Where("email = ?", email).First(&user).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	user, err := s.repo.FindByEmail(email)
+	if err != nil {
+		if errors.Is(err, repositories.ErrNotFound) {
 			return errors.New("no account found with that email")
 		}
 		return fmt.Errorf("db error: %w", err)
@@ -141,7 +142,7 @@ func (s *AuthService) ForgotPassword(email string) error {
 		return fmt.Errorf("failed to generate otp: %w", err)
 	}
 
-	if err := utils.SendPasswordResetEmail(email, otp); err != nil {
+	if err := utils.SendPasswordResetEmail(user.Email, otp); err != nil {
 		return fmt.Errorf("failed to send reset email: %w", err)
 	}
 
@@ -168,10 +169,8 @@ func (s *AuthService) ResetPassword(email, otp, newPassword string) error {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	return s.DB.Model(&models.User{}).
-		Where("email = ?", email).
-		Updates(map[string]interface{}{
-			"password_hash": hashedPassword,
-			"updated_at":    time.Now(),
-		}).Error
+	return s.repo.UpdateStatus(email, map[string]interface{}{
+		"password_hash": hashedPassword,
+		"updated_at":    time.Now(),
+	})
 }
